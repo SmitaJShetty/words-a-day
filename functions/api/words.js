@@ -1,9 +1,7 @@
 // worker.js
 export default {
+
     async fetch(request, env, ctx) {
-        // Testing Cloudflare Pages Functions
-        console.log("Cloudflare Pages function running");
-        
         // CORS headers
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
@@ -68,3 +66,6 @@ export default {
         }
     }
 };
+
+ // Testing Cloudflare Pages Functions
+    console.log("Cloudflare Pages function running");

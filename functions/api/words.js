@@ -45,6 +45,7 @@ export default {
             // Generate response
             const response = await perplexity.generateResponse(prompt, options);
 
+            
             return new Response(JSON.stringify(response), {
                 headers: {
                     'Content-Type': 'application/json',

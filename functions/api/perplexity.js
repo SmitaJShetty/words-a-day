@@ -54,6 +54,7 @@ class WordsManager {
     }
 }
 
+
 // worker.js
 export default {
     async fetch(request, env, ctx) {

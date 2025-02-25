@@ -1,9 +1,8 @@
-export default {
-  async fetch(request, env) {
-    return new Response("Testing here....")
-  }
+export function onRequest(context) {
+  return new Response("Hello from Cloudflare Functions!", {
+    headers: { "content-type": "text/plain" },
+  });
 }
-
 // worker.js
 // export default {
 

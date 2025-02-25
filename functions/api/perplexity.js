@@ -1,74 +1,84 @@
-// wordsManager.js
-class WordsManager {
-    constructor(env) {
-        this.KV = env.WORDS_KV;
-        this.perplexityClient = new PerplexityAIClient(env.PERPLEXITY_API_KEY);
+// perplexityAI.js
+class PerplexityAIClient {
+    constructor(apiKey) {
+        if (!apiKey) {
+            throw new Error('API key is required');
+        }
+        
+        this.apiKey = apiKey;
+        this.baseURL = 'https://api.perplexity.ai';
     }
 
-    async getUserKey(userId) {
-        return `user_${userId}_words`;
-    }
-
-    async getStoredWords(userId) {
-        const userKey = await this.getUserKey(userId);
-        const storedWords = await this.KV.get(userKey);
-        return storedWords ? JSON.parse(storedWords) : [];
-    }
-
-    async storeWords(userId, words) {
-        const userKey = await this.getUserKey(userId);
-        const existingWords = await this.getStoredWords(userId);
-        const updatedWords = [...existingWords, ...words];
-        await this.KV.put(userKey, JSON.stringify(updatedWords));
-    }
-
-    async generatePrompt(count, age, language = 'English', existingWords = []) {
-        return `Generate ${count} unique ${language} words that are appropriate for age ${age}. 
-                These words should be educational and not include any of these previously used words: ${existingWords.join(', ')}.
-                Format the response as a JSON array of strings.`;
-    }
-
-    async generateNewWords(count, age, language = 'English') {
+    async generateResponse(prompt, options = {}) {
         try {
-            // Get existing words for the user
-            const existingWords = await this.getStoredWords(userId);
-            
-            // Generate prompt for Perplexity
-            const prompt = await this.generatePrompt(count, age, language, existingWords);
-            
-            // Get response from Perplexity
-            const response = await this.perplexityClient.generateResponse(prompt);
-            
-            if (!response.success) {
-                throw new Error('Failed to generate words');
+            const defaultOptions = {
+                model: 'mistral-7b-instruct',
+                max_tokens: 1024,
+                temperature: 0.7,
+                stream: false
+            };
+
+            const requestOptions = {
+                ...defaultOptions,
+                ...options,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ]
+            };
+
+            const response = await fetch(`${this.baseURL}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestOptions)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'API request failed');
             }
 
-            // Parse the response to get words array
-            const newWords = JSON.parse(response.text);
+            const data = await response.json();
             
-            return newWords;
+            return {
+                success: true,
+                data: data,
+                text: data.choices[0].message.content
+            };
+
         } catch (error) {
-            console.error('Error generating words:', error);
-            throw error;
+            return {
+                success: false,
+                error: error.message,
+                statusCode: error.status
+            };
         }
     }
 }
 
-
 // worker.js
 export default {
     async fetch(request, env, ctx) {
+        // CORS headers
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         };
 
-        // Handle CORS preflight
+        // Handle OPTIONS request for CORS
         if (request.method === 'OPTIONS') {
-            return new Response(null, { headers: corsHeaders });
+            return new Response(null, {
+                headers: corsHeaders
+            });
         }
 
+        // Only accept POST requests
         if (request.method !== 'POST') {
             return new Response('Method not allowed', {
                 status: 405,
@@ -77,14 +87,12 @@ export default {
         }
 
         try {
+            // Parse the request body
             const reqData = await request.json();
-            const { userId, age, count, language = 'English' } = reqData;
+            const { prompt, options } = reqData;
 
-            // Validate inputs
-            if (!userId || !age || !count) {
-                return new Response(JSON.stringify({
-                    error: 'Missing required fields: userId, age, and count are required'
-                }), {
+            if (!prompt) {
+                return new Response(JSON.stringify({ error: 'Prompt is required' }), {
                     status: 400,
                     headers: {
                         'Content-Type': 'application/json',
@@ -93,31 +101,13 @@ export default {
                 });
             }
 
-            if (count <= 0 || !Number.isInteger(count)) {
-                return new Response(JSON.stringify({
-                    error: 'Count must be a positive integer'
-                }), {
-                    status: 400,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...corsHeaders
-                    }
-                });
-            }
+            // Initialize the Perplexity client with API key from environment variable
+            const perplexity = new PerplexityAIClient(env.PERPLEXITY_API_KEY);
 
-            // Initialize WordsManager
-            const wordsManager = new WordsManager(env);
+            // Generate response
+            const response = await perplexity.generateResponse(prompt, options);
 
-            // Generate new words
-            const newWords = await wordsManager.generateNewWords(count, age, language);
-
-            // Store the new words
-            await wordsManager.storeWords(userId, newWords);
-
-            return new Response(JSON.stringify({
-                success: true,
-                words: newWords
-            }), {
+            return new Response(JSON.stringify(response), {
                 headers: {
                     'Content-Type': 'application/json',
                     ...corsHeaders
@@ -125,9 +115,9 @@ export default {
             });
 
         } catch (error) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: error.message
+            return new Response(JSON.stringify({ 
+                success: false, 
+                error: error.message 
             }), {
                 status: 500,
                 headers: {

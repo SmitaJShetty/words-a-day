@@ -49,8 +49,6 @@ async function handleRequest(event) {
     const result = await processPrompt(customPrompt); 
     const newWords = extractNewWords(result);
     await updateUserWordsList(event, userId, userData, newWords);
-    
-    console.log(`result: `, result);
     return new Response(JSON.stringify({
       success: true,
       userId: userId,
@@ -118,41 +116,41 @@ async function handleRequest(event) {
     return await perplexity.generateResponse(prompt);
 
     // return {
-    //       "success": true,
-    //       "data": {
-    //           "id": "6adcc1b6-f5f5-4576-9694-c29b7a4a0074",
-    //           "model": "sonar",
-    //           "created": 1741173814,
-    //           "usage": {
-    //               "prompt_tokens": 364,
-    //               "completion_tokens": 544,
-    //               "total_tokens": 908
-    //           },
-    //           "citations": [
-    //               "https://www.examword.com/high-school-word/",
-    //               "https://www.edutopia.org/article/vocabulary-games-content-knowledge/",
-    //               "https://www.greatschools.org/gk/parenting/vocabulary/vocabulary-words-for-1st-through-12th-graders/",
-    //               "https://www.serpinstitute.org/wordgen-weekly/vocabulary-instruction",
-    //               "https://www.teacherspayteachers.com/browse?search=high+school+vocabulary+words"
-    //           ],
-    //           "object": "chat.completion",
-    //           "choices": [
-    //               {
-    //                   "index": 0,
-    //                   "finish_reason": "stop",
-    //                   "message": {
-    //                       "role": "assistant",
-    //                       "content": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Ennui\", \"Fastidious\", \"Perfidious\", \"Ephemeral\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"She was a perspicacious observer of human behavior and could often predict how people would react in different situations.\",\n      \"etymology\": \"From the Latin 'perspicax,' meaning 'penetrating, discerning,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and was looking for a change.\",\n      \"etymology\": \"From French, derived from Old French 'enuier,' meaning 'to annoy,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She was a fastidious editor, ensuring that every detail in the manuscript was correct before publication.\",\n      \"etymology\": \"From the Latin 'fastidiosus,' meaning 'squeamish,'\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Perfidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Disloyal or treacherous; having a tendency to betray trust.\",\n      \"example_sentence\": \"The company felt that the former employee's actions were perfidious and damaging to their reputation.\",\n      \"etymology\": \"From the Latin 'perfidiosus,' meaning 'faithless, treacherous,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ephemeral\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Lasting for a very short time.\",\n      \"example_sentence\": \"The firefly's glow was ephemeral, lasting only for a few seconds.\",\n      \"etymology\": \"From the Greek 'ephēmeros,' meaning 'daily,'\",\n      \"difficulty_level\": 3\n    }\n  ]\n}\n```"
-    //                   },
-    //                   "delta": {
-    //                       "role": "assistant",
-    //                       "content": ""
-    //                   }
-    //               }
-    //           ]
-    //       },
-    //       "text": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Ennui\", \"Fastidious\", \"Perfidious\", \"Ephemeral\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"She was a perspicacious observer of human behavior and could often predict how people would react in different situations.\",\n      \"etymology\": \"From the Latin 'perspicax,' meaning 'penetrating, discerning,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and was looking for a change.\",\n      \"etymology\": \"From French, derived from Old French 'enuier,' meaning 'to annoy,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She was a fastidious editor, ensuring that every detail in the manuscript was correct before publication.\",\n      \"etymology\": \"From the Latin 'fastidiosus,' meaning 'squeamish,'\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Perfidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Disloyal or treacherous; having a tendency to betray trust.\",\n      \"example_sentence\": \"The company felt that the former employee's actions were perfidious and damaging to their reputation.\",\n      \"etymology\": \"From the Latin 'perfidiosus,' meaning 'faithless, treacherous,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ephemeral\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Lasting for a very short time.\",\n      \"example_sentence\": \"The firefly's glow was ephemeral, lasting only for a few seconds.\",\n      \"etymology\": \"From the Greek 'ephēmeros,' meaning 'daily,'\",\n      \"difficulty_level\": 3\n    }\n  ]\n}\n```"
-    //   }
+    //     "success": true,
+    //     "data": {
+    //         "id": "37aaa0a1-e68f-4a52-a8df-73da15cf5ddc",
+    //         "model": "sonar",
+    //         "created": 1741175432,
+    //         "usage": {
+    //             "prompt_tokens": 368,
+    //             "completion_tokens": 542,
+    //             "total_tokens": 910
+    //         },
+    //         "citations": [
+    //             "https://www.examword.com/high-school-word/",
+    //             "https://www.edutopia.org/article/vocabulary-games-content-knowledge/",
+    //             "https://www.greatschools.org/gk/parenting/vocabulary/12th-grade-vocabulary-words/",
+    //             "https://www.serpinstitute.org/wordgen-weekly/vocabulary-instruction",
+    //             "https://www.vocabulary.com/lists/gw5mfvr5/120-words-every-10th-grader-should-know"
+    //         ],
+    //         "object": "chat.completion",
+    //         "choices": [
+    //             {
+    //                 "index": 0,
+    //                 "finish_reason": "stop",
+    //                 "message": {
+    //                     "role": "assistant",
+    //                     "content": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Fastidious\", \"Meritorious\", \"Cacophonous\", \"Ennui\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"The detective was perspicacious and quickly pieced together the evidence to solve the case.\",\n      \"etymology\": \"From Latin *perspicax*, meaning 'penetrating' or 'discerning'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She is a fastidious editor, ensuring every detail in the manuscript is correct.\",\n      \"etymology\": \"From Latin *fastidiosus*, meaning 'delicate' or 'squeamish'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Meritorious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Deserving praise or reward; having or showing merit.\",\n      \"example_sentence\": \"Her meritorious service to the community earned her a prestigious award.\",\n      \"etymology\": \"From Latin *meritorius*, meaning 'deserving reward'.\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Cacophonous\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having an unpleasant mixture of loud, harsh sounds.\",\n      \"example_sentence\": \"The cacophonous noise from the construction site was disturbing the peace.\",\n      \"etymology\": \"From Greek *κακόφωνος* (*kakophōnos*), meaning 'bad sound'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and looked for a change.\",\n      \"etymology\": \"From French *ennui*, derived from Old French *enuier*, meaning 'to annoy'.\",\n      \"difficulty_level\": 4\n    }\n  ]\n}\n```"
+    //                 },
+    //                 "delta": {
+    //                     "role": "assistant",
+    //                     "content": ""
+    //                 }
+    //             }
+    //         ]
+    //     },
+    //     "text": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Fastidious\", \"Meritorious\", \"Cacophonous\", \"Ennui\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"The detective was perspicacious and quickly pieced together the evidence to solve the case.\",\n      \"etymology\": \"From Latin *perspicax*, meaning 'penetrating' or 'discerning'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She is a fastidious editor, ensuring every detail in the manuscript is correct.\",\n      \"etymology\": \"From Latin *fastidiosus*, meaning 'delicate' or 'squeamish'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Meritorious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Deserving praise or reward; having or showing merit.\",\n      \"example_sentence\": \"Her meritorious service to the community earned her a prestigious award.\",\n      \"etymology\": \"From Latin *meritorius*, meaning 'deserving reward'.\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Cacophonous\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having an unpleasant mixture of loud, harsh sounds.\",\n      \"example_sentence\": \"The cacophonous noise from the construction site was disturbing the peace.\",\n      \"etymology\": \"From Greek *κακόφωνος* (*kakophōnos*), meaning 'bad sound'.\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and looked for a change.\",\n      \"etymology\": \"From French *ennui*, derived from Old French *enuier*, meaning 'to annoy'.\",\n      \"difficulty_level\": 4\n    }\n  ]\n}\n```"
+    // }
   }
   
   // Extract new words from the API result
@@ -176,14 +174,17 @@ async function handleRequest(event) {
       
       // Get the current list of previous words
       let previousWords = [...updatedUserData.previous_words_list];
-      
+      console.log(`previous words:`, previousWords);
+
       // Determine the word count limit for this user
-      const wordCountLimit = updatedUserData.word_count;
-      
+      const wordCountLimit = updatedUserData.words_count;
+      console.log(`word count limit`, wordCountLimit);
+
       // Add new words to the list, handling the word count limit
       for (const newWord of newWords) {
         if (previousWords.length < wordCountLimit) {
           // If under the limit, simply append the new word
+          console.log(`new word to be added: `, newWord);
           previousWords.push(newWord);
         } else {
           // If at the limit, replace a random existing word

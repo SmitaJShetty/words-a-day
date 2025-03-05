@@ -7,7 +7,7 @@ async function handleRequest(event) {
   const request = event.request;
   const url = new URL(request.url);
   
-  const userId = url.searchParams.get("userid"); console.log(event.request);
+  const userId = url.searchParams.get("userid"); 
   const promptTemplate = await VOCABUILDER_KV.get("PROMPT");
   
   if (!promptTemplate) {
@@ -33,7 +33,7 @@ async function handleRequest(event) {
   try {
     // Fetch user data from KV store
     const userData = await fetchUserData(event, userId);
-    
+      
     if (!userData) {
       return new Response(JSON.stringify({
         success: false,
@@ -45,7 +45,8 @@ async function handleRequest(event) {
     }
     
     const customPrompt = generateCustomPrompt(promptTemplate, userData);
-    const result = await processPrompt(customPrompt);
+    
+    const result = await processPrompt(customPrompt); 
     const newWords = extractNewWords(result);
     await updateUserWordsList(event, userId, userData, newWords);
     
@@ -71,13 +72,12 @@ async function handleRequest(event) {
   async function fetchUserData(context, userId) {
     try {
       // Assuming your KV namespace is bound as VOCABUILDER_KV in your environment
-      const userDataString = await VOCABUILDER_KV.get(userId);
-      
-      if (!userDataString) {p[]
+      const userData = await VOCABUILDER_KV.get(userId);
+      if (userData==null) {
         return null;
       }
       
-      return JSON.parse(userDataString);
+      return JSON.parse(userData);
     } catch (error) {
       throw new Error(`Failed to fetch user data: ${error.message}`);
     }
@@ -112,14 +112,17 @@ async function handleRequest(event) {
   
   // Process the prompt (this would call the Perplexity API)
   async function processPrompt(prompt, env) {
-    const perplexity = new PerplexityAIClient(env.PERPLEXITY_API_KEY);
-    return await perplexity.generateResponse(prompt);
+    const perplexityAPIKEY = await VOCABUILDER_KV.get("PERPLEXITY_API_KEY")
+    const perplexity = new PerplexityAIClient(perplexityAPIKEY);
+    const r= await perplexity.generateResponse(prompt);
+    return r;
   }
   
   // Extract new words from the API result
   function extractNewWords(result) {
     // This function extracts just the words from the API response
     // Adjust according to the actual structure of your Perplexity API response
+    const content=result.data.choices[0].message.content;
     return result.words.map(wordObj => wordObj.word);
   }
   
@@ -173,7 +176,7 @@ class PerplexityAIClient {
   async generateResponse(prompt, options = {}) {
       try {
           const defaultOptions = {
-              model: 'mistral-7b-instruct',
+              model: 'sonar',
               max_tokens: 1024,
               temperature: 0.7,
               stream: false
@@ -198,7 +201,7 @@ class PerplexityAIClient {
               },
               body: JSON.stringify(requestOptions)
           });
-
+          
           if (!response.ok) {
               const errorData = await response.json();
               throw new Error(errorData.error || 'API request failed');
@@ -206,11 +209,12 @@ class PerplexityAIClient {
 
           const data = await response.json();
           
-          return {
+          const resp= {
               success: true,
               data: data,
               text: data.choices[0].message.content
           };
+          return resp;
 
       } catch (error) {
           return {

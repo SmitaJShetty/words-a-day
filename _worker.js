@@ -50,6 +50,7 @@ async function handleRequest(event) {
     const newWords = extractNewWords(result);
     await updateUserWordsList(event, userId, userData, newWords);
     
+    console.log(`result: `, result);
     return new Response(JSON.stringify({
       success: true,
       userId: userId,
@@ -122,8 +123,14 @@ async function handleRequest(event) {
   function extractNewWords(result) {
     // This function extracts just the words from the API response
     // Adjust according to the actual structure of your Perplexity API response
+    console.log(`response from ai: `, result);
     const content=result.data.choices[0].message.content;
-    return result.words.map(wordObj => wordObj.word);
+    console.log(`content: `, content);
+    const wordlist = content.replace("```json", ).replace("```",);
+    const jsonResp = wordlist;
+    const jsonWordList = jsonResp.word_list;
+    console.log(`word list: `, jsonWordList);
+    return jsonWordList;
   }
   
   // Update the user's previous words list

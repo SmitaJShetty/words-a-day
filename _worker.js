@@ -54,7 +54,7 @@ async function handleRequest(event) {
     return new Response(JSON.stringify({
       success: true,
       userId: userId,
-      result: result
+      result: parseResultIntoJson(result).word_details,
     }), {
       headers: { "Content-Type": "application/json" }
     });
@@ -115,24 +115,59 @@ async function handleRequest(event) {
   async function processPrompt(prompt, env) {
     const perplexityAPIKEY = await VOCABUILDER_KV.get("PERPLEXITY_API_KEY")
     const perplexity = new PerplexityAIClient(perplexityAPIKEY);
-    const r= await perplexity.generateResponse(prompt);
-    return r;
+    return await perplexity.generateResponse(prompt);
+
+    // return {
+    //       "success": true,
+    //       "data": {
+    //           "id": "6adcc1b6-f5f5-4576-9694-c29b7a4a0074",
+    //           "model": "sonar",
+    //           "created": 1741173814,
+    //           "usage": {
+    //               "prompt_tokens": 364,
+    //               "completion_tokens": 544,
+    //               "total_tokens": 908
+    //           },
+    //           "citations": [
+    //               "https://www.examword.com/high-school-word/",
+    //               "https://www.edutopia.org/article/vocabulary-games-content-knowledge/",
+    //               "https://www.greatschools.org/gk/parenting/vocabulary/vocabulary-words-for-1st-through-12th-graders/",
+    //               "https://www.serpinstitute.org/wordgen-weekly/vocabulary-instruction",
+    //               "https://www.teacherspayteachers.com/browse?search=high+school+vocabulary+words"
+    //           ],
+    //           "object": "chat.completion",
+    //           "choices": [
+    //               {
+    //                   "index": 0,
+    //                   "finish_reason": "stop",
+    //                   "message": {
+    //                       "role": "assistant",
+    //                       "content": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Ennui\", \"Fastidious\", \"Perfidious\", \"Ephemeral\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"She was a perspicacious observer of human behavior and could often predict how people would react in different situations.\",\n      \"etymology\": \"From the Latin 'perspicax,' meaning 'penetrating, discerning,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and was looking for a change.\",\n      \"etymology\": \"From French, derived from Old French 'enuier,' meaning 'to annoy,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She was a fastidious editor, ensuring that every detail in the manuscript was correct before publication.\",\n      \"etymology\": \"From the Latin 'fastidiosus,' meaning 'squeamish,'\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Perfidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Disloyal or treacherous; having a tendency to betray trust.\",\n      \"example_sentence\": \"The company felt that the former employee's actions were perfidious and damaging to their reputation.\",\n      \"etymology\": \"From the Latin 'perfidiosus,' meaning 'faithless, treacherous,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ephemeral\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Lasting for a very short time.\",\n      \"example_sentence\": \"The firefly's glow was ephemeral, lasting only for a few seconds.\",\n      \"etymology\": \"From the Greek 'ephēmeros,' meaning 'daily,'\",\n      \"difficulty_level\": 3\n    }\n  ]\n}\n```"
+    //                   },
+    //                   "delta": {
+    //                       "role": "assistant",
+    //                       "content": ""
+    //                   }
+    //               }
+    //           ]
+    //       },
+    //       "text": "```json\n{\n  \"word_list\": [\"Perspicacious\", \"Ennui\", \"Fastidious\", \"Perfidious\", \"Ephemeral\"],\n  \"word_details\": [\n    {\n      \"word\": \"Perspicacious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Having a keen understanding and insight; able to notice and understand things that are not immediately apparent.\",\n      \"example_sentence\": \"She was a perspicacious observer of human behavior and could often predict how people would react in different situations.\",\n      \"etymology\": \"From the Latin 'perspicax,' meaning 'penetrating, discerning,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ennui\",\n      \"part_of_speech\": \"noun\",\n      \"definition\": \"A feeling of listlessness and boredom; a lack of interest or excitement.\",\n      \"example_sentence\": \"After a few months of doing the same job, he started to feel ennui and was looking for a change.\",\n      \"etymology\": \"From French, derived from Old French 'enuier,' meaning 'to annoy,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Fastidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Meticulous and demanding in one's standards; having a strong attention to detail.\",\n      \"example_sentence\": \"She was a fastidious editor, ensuring that every detail in the manuscript was correct before publication.\",\n      \"etymology\": \"From the Latin 'fastidiosus,' meaning 'squeamish,'\",\n      \"difficulty_level\": 3\n    },\n    {\n      \"word\": \"Perfidious\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Disloyal or treacherous; having a tendency to betray trust.\",\n      \"example_sentence\": \"The company felt that the former employee's actions were perfidious and damaging to their reputation.\",\n      \"etymology\": \"From the Latin 'perfidiosus,' meaning 'faithless, treacherous,'\",\n      \"difficulty_level\": 4\n    },\n    {\n      \"word\": \"Ephemeral\",\n      \"part_of_speech\": \"adjective\",\n      \"definition\": \"Lasting for a very short time.\",\n      \"example_sentence\": \"The firefly's glow was ephemeral, lasting only for a few seconds.\",\n      \"etymology\": \"From the Greek 'ephēmeros,' meaning 'daily,'\",\n      \"difficulty_level\": 3\n    }\n  ]\n}\n```"
+    //   }
   }
   
   // Extract new words from the API result
   function extractNewWords(result) {
     // This function extracts just the words from the API response
     // Adjust according to the actual structure of your Perplexity API response
-    console.log(`response from ai: `, result);
-    const content=result.data.choices[0].message.content;
-    console.log(`content: `, content);
-    const wordlist = content.replace("```json", ).replace("```",);
-    const jsonResp = wordlist;
-    const jsonWordList = jsonResp.word_list;
-    console.log(`word list: `, jsonWordList);
-    return jsonWordList;
+    return parseResultIntoJson(result).word_list;
   }
-  
+  /// parses result from ai and removes code prompt, parses into json before returning it
+  function parseResultIntoJson(result){
+    const content=result.data.choices[0].message.content;
+    const wordlist = content.replace("```json","" ).replace("```",""); 
+    return JSON.parse(wordlist);
+  }
+
   // Update the user's previous words list
   async function updateUserWordsList(context, userId, userData, newWords) {
     try {
@@ -161,7 +196,7 @@ async function handleRequest(event) {
       updatedUserData.previous_words_list = previousWords;
       
       // Save the updated user data back to the KV store
-      await context.env.VOCABUILDER_KV.put(userId, JSON.stringify(updatedUserData));
+      await VOCABUILDER_KV.put(userId, JSON.stringify(updatedUserData));
       
       return updatedUserData;
     } catch (error) {

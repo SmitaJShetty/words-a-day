@@ -88,7 +88,6 @@ async function handleRequest(event) {
   }
 }
 
-// Check if user is eligible to receive notification based on frequency
 function checkNotificationEligibility(userData) {
   // If no frequency or last notification time is not set, allow notification
   if (!userData.frequency || !userData.last_notification_date) {
@@ -100,25 +99,44 @@ function checkNotificationEligibility(userData) {
   
   switch (userData.frequency.toLowerCase()) {
     case 'daily':
+      // Only allow if current date is different from last notification date
       return !isSameDay(currentDate, lastNotificationDate);
     
     case 'weekly':
+      // Allow if 7 or more days have passed
       return daysDifference(currentDate, lastNotificationDate) >= 7;
     
     case 'biweekly':
+      // Allow if 14 or more days have passed
       return daysDifference(currentDate, lastNotificationDate) >= 14;
     
     case 'fortnightly':
-      // Check if it's either 1st or 15th of the month
-      return (currentDate.getDate() === 1 || currentDate.getDate() === 15) && 
-             !isSameDay(currentDate, lastNotificationDate);
+      // Allow only on 1st and 15th of the month
+      // And only if not already notified on this date
+      const isValidDate = currentDate.getDate() === 1 || currentDate.getDate() === 15;
+      return isValidDate && !isSameDay(currentDate, lastNotificationDate);
     
     case 'monthly':
-      return currentDate.getMonth() !== lastNotificationDate.getMonth();
+      // Allow only if it's a different month
+      return currentDate.getMonth() !== lastNotificationDate.getMonth() ||
+             currentDate.getFullYear() !== lastNotificationDate.getFullYear();
     
     default:
+      // If no valid frequency, allow notification
       return true;
   }
+}
+
+// Helper functions remain the same
+function isSameDay(date1, date2) {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+}
+
+function daysDifference(date1, date2) {
+  const timeDiff = Math.abs(date1.getTime() - date2.getTime());
+  return Math.ceil(timeDiff / (1000 * 3600 * 24));
 }
 
 // Helper function to check if two dates are the same day
@@ -160,9 +178,10 @@ async function updateUserWordsList(context, userId, userData, newWords) {
     // Update the user data with the new list
     updatedUserData.previous_words_list = previousWords;
     
-    // Update last notification date to current date
-    updatedUserData.last_notification_date = new Date().toISOString();
-    
+    // Calculate and set last_notification_date based on frequency
+    updatedUserData.last_notification_date = calculateNextNotificationDate(userData.frequency);
+    console.log(`next date: `, updatedUserData.last_notification_date);
+
     // Save the updated user data back to the KV store
     await VOCABUILDER_KV.put(userId, JSON.stringify(updatedUserData));
     
@@ -172,6 +191,55 @@ async function updateUserWordsList(context, userId, userData, newWords) {
   }
 }
   
+function calculateNextNotificationDate(frequency) {
+  const currentDate = new Date();
+  
+  switch (frequency.toLowerCase()) {
+    case 'daily':
+      // For daily, set to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+      break;
+    
+    case 'weekly':
+      // For weekly, set to 7 days from now
+      currentDate.setDate(currentDate.getDate() + 7);
+      break;
+    
+    case 'biweekly':
+      // For biweekly, set to 14 days from now
+      currentDate.setDate(currentDate.getDate() + 14);
+      break;
+    
+    case 'fortnightly':
+      // For fortnightly, find next valid date (1st or 15th)
+      const currentDay = currentDate.getDate();
+      if (currentDay < 15) {
+        currentDate.setDate(15);
+      } else {
+        // Move to 1st of next month
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        currentDate.setDate(1);
+      }
+      break;
+    
+    case 'monthly':
+      // For monthly, move to next month
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      currentDate.setDate(1);
+      break;
+    
+    default:
+      // If no frequency specified, use default to daily
+      currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Reset time to midnight (00:00:00)
+  currentDate.setHours(0, 0, 0, 0);
+  
+  // Return as ISO string
+  return currentDate.toISOString();
+}
+
   // Fetch user data from KV store
   async function fetchUserData(context, userId) {
     try {
@@ -279,17 +347,17 @@ async function updateUserWordsList(context, userId, userData, newWords) {
       
       // Get the current list of previous words
       let previousWords = [...updatedUserData.previous_words_list];
-      console.log(`previous words:`, previousWords);
+      
 
       // Determine the word count limit for this user
       const wordCountLimit = updatedUserData.words_count;
-      console.log(`word count limit`, wordCountLimit);
+      
 
       // Add new words to the list, handling the word count limit
       for (const newWord of newWords) {
         if (previousWords.length < wordCountLimit) {
           // If under the limit, simply append the new word
-          console.log(`new word to be added: `, newWord);
+          
           previousWords.push(newWord);
         } else {
           // If at the limit, replace a random existing word

@@ -3,6 +3,11 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event));
 });
 
+// The main event listener for incoming requests
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event));
+});
+
 async function handleRequest(event) {
   const request = event.request;
   const url = new URL(request.url);
@@ -44,11 +49,27 @@ async function handleRequest(event) {
       });
     }
     
+    // Check if user can receive notification based on frequency
+    const canReceiveNotification = checkNotificationEligibility(userData);
+    
+    if (!canReceiveNotification) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `You have already received words for your ${userData.frequency} frequency. Please wait for the next scheduled time.`
+      }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
     const customPrompt = generateCustomPrompt(promptTemplate, userData);
     
     const result = await processPrompt(customPrompt); 
     const newWords = extractNewWords(result);
-    await updateUserWordsList(event, userId, userData, newWords);
+    
+    // Update user data with new words and notification status
+    const updatedUserData = await updateUserWordsList(event, userId, userData, newWords);
+    
     return new Response(JSON.stringify({
       success: true,
       userId: userId,
@@ -64,6 +85,90 @@ async function handleRequest(event) {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
+  }
+}
+
+// Check if user is eligible to receive notification based on frequency
+function checkNotificationEligibility(userData) {
+  // If no frequency or last notification time is not set, allow notification
+  if (!userData.frequency || !userData.last_notification_date) {
+    return true;
+  }
+  
+  const currentDate = new Date();
+  const lastNotificationDate = new Date(userData.last_notification_date);
+  
+  switch (userData.frequency.toLowerCase()) {
+    case 'daily':
+      return !isSameDay(currentDate, lastNotificationDate);
+    
+    case 'weekly':
+      return daysDifference(currentDate, lastNotificationDate) >= 7;
+    
+    case 'biweekly':
+      return daysDifference(currentDate, lastNotificationDate) >= 14;
+    
+    case 'fortnightly':
+      // Check if it's either 1st or 15th of the month
+      return (currentDate.getDate() === 1 || currentDate.getDate() === 15) && 
+             !isSameDay(currentDate, lastNotificationDate);
+    
+    case 'monthly':
+      return currentDate.getMonth() !== lastNotificationDate.getMonth();
+    
+    default:
+      return true;
+  }
+}
+
+// Helper function to check if two dates are the same day
+function isSameDay(date1, date2) {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+}
+
+// Helper function to calculate days difference between two dates
+function daysDifference(date1, date2) {
+  const timeDiff = Math.abs(date1.getTime() - date2.getTime());
+  return Math.ceil(timeDiff / (1000 * 3600 * 24));
+}
+
+// Update the user's previous words list and notification status
+async function updateUserWordsList(context, userId, userData, newWords) {
+  try {
+    // Create a copy of the user data
+    const updatedUserData = { ...userData };
+    
+    // Get the current list of previous words
+    let previousWords = [...updatedUserData.previous_words_list];
+
+    // Determine the word count limit for this user
+    const wordCountLimit = updatedUserData.words_count;
+
+    // Add new words to the list, handling the word count limit
+    for (const newWord of newWords) {
+      if (previousWords.length < wordCountLimit) {
+        previousWords.push(newWord);
+      } else {
+        // Replace a random existing word
+        const randomIndex = Math.floor(Math.random() * previousWords.length);
+        previousWords[randomIndex] = newWord;
+      }
+    }
+    
+    // Update the user data with the new list
+    updatedUserData.previous_words_list = previousWords;
+    
+    // Update last notification date to current date
+    updatedUserData.last_notification_date = new Date().toISOString();
+    
+    // Save the updated user data back to the KV store
+    await VOCABUILDER_KV.put(userId, JSON.stringify(updatedUserData));
+    
+    return updatedUserData;
+  } catch (error) {
+    throw new Error(`Failed to update user words list: ${error.message}`);
   }
 }
   

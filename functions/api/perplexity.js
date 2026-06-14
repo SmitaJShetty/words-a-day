@@ -1,56 +1,61 @@
-// functions/api/words.js
+// functions/api/perplexity.js
 
-import PerplexityAIClient from './perplexity.js';
-
-// Global CORS configurations header blueprint
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-// 1. Handle preflight CORS OPTIONS requests automatically
-export async function onRequestOptions() {
-    return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-    });
-}
-
-// 2. Main POST Request routing logic
-export async function onRequestPost(context) {
-    const { request, env } = context;
-
-    try {
-        // Parse raw payload inputs
-        const reqData = await request.json();
-        const { prompt, options } = reqData;
-
-        if (!prompt) {
-            return new Response(JSON.stringify({ error: 'Validation Error: Prompt parameter is required.' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json', ...corsHeaders }
-            });
+export default class PerplexityAIClient {
+    constructor(apiKey) {
+        if (!apiKey) {
+            throw new Error('API key validation failure: PERPLEXITY_API_KEY is uninitialized.');
         }
+        this.apiKey = apiKey;
+        this.baseURL = 'https://api.perplexity.ai';
+    }
 
-        // Initialize our imported client module using the environment variables bound to Pages
-        const perplexity = new PerplexityAIClient(env.PERPLEXITY_API_KEY);
+    async generateResponse(prompt, options = {}) {
+        try {
+            const defaultOptions = {
+                model: 'sonar', // Updated to the correct active Perplexity model naming convention
+                max_tokens: 1024,
+                temperature: 0.7,
+                stream: false
+            };
 
-        // Execute processing pipeline
-        const aiResponse = await perplexity.generateResponse(prompt, options);
+            const requestOptions = {
+                ...defaultOptions,
+                ...options,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ]
+            };
 
-        return new Response(JSON.stringify(aiResponse), {
-            status: aiResponse.success ? 200 : 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+            const response = await fetch(`${this.baseURL}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestOptions)
+            });
 
-    } catch (error) {
-        return new Response(JSON.stringify({ 
-            success: false, 
-            error: `System Error: ${error.message}` 
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || errorData.error || 'API request failed');
+            }
+
+            const data = await response.json();
+            
+            return {
+                success: true,
+                data: data,
+                text: data.choices[0].message.content
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 }

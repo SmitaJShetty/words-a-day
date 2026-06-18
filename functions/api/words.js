@@ -24,7 +24,21 @@ export async function onRequestPost(context) {
   try {
     // Parse raw payload inputs
     const reqData = await request.json();
-    const { prompt, options } = reqData;
+    const { options } = reqData;
+
+    const masterPrompt = await env.WORDS_KV.get("PROMPT");
+
+    if (!masterPrompt) {
+      return new Response(
+        JSON.stringify({
+          error: 'Configuration Error: "PROMPT" key not found in KV store.',
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
 
     if (!prompt) {
       return new Response(

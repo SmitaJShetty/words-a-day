@@ -17,67 +17,93 @@ export async function onRequestOptions() {
   });
 }
 
-// 2. Main POST Request routing logic
+//queries db for new words , not already sent to user
+//if new words are not found, then send message to queue
+//queue addition will trigger job to fetch new records from worer-consumer function
 export async function onRequestPost(context) {
-  const { request, env } = context;
+  const { env, request } = context;
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Words-App-Token",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    // Parse raw payload inputs
-    const reqData = await request.json();
-    const { options } = reqData;
+    let userId = 1; // Defaulting to user 1 for initial environment testing
 
-    const masterPrompt = await env.WORDS_KV.get("PROMPT");
+    // 1. Query D1 for a random word not seen by this user
+    const d1Query = `
+            SELECT * FROM WordBank 
+            WHERE id NOT IN (SELECT word_id FROM UserProgress WHERE user_id = ?)
+            ORDER BY RANDOM() LIMIT 1;
+        `;
+    let wordRecord = await env.WORDS_DB.prepare(d1Query).bind(userId).first();
 
-    if (!masterPrompt) {
+    // 2. ASYNC DECOUPLED TRIGGER: If the database pool is dry
+    if (!wordRecord) {
+      console.log("Pool empty! Queueing background harvesting request.");
+
+      // Add task payload context directly to your Cloudflare Queue
+      await env.HARVEST_QUEUE.send({
+        action: "HARVEST_NEW_WORDS",
+        userId: userId,
+        requestedAt: new Date().toISOString(),
+      });
+
+      // Return a fast status message so the application UI doesn't hang
       return new Response(
         JSON.stringify({
-          error: 'Configuration Error: "PROMPT" key not found in KV store.',
+          success: true,
+          source: "async_queue_trigger",
+          data: {
+            word: "Preparing New Words...",
+            part_of_speech: "status",
+            definition:
+              "The background engine is currently harvesting fresh vocabulary for you.",
+            example_sentence:
+              "Please refresh the interface in a few seconds to review your new words.",
+          },
         }),
         {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (!prompt) {
-      return new Response(
-        JSON.stringify({
-          error: "Validation Error: Prompt parameter is required.",
-        }),
-        {
-          status: 400,
+          status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         },
       );
     }
 
-    if (!env.PERPLEXITY_API_KEY) {
-      return new Response(
-        JSON.stringify({
-          keys_found: Object.keys(env), // See what the code actually sees
-          error: "Key is missing",
-        }),
-        { status: 500 },
-      );
-    }
+    // 3. Log selection choice to prevent future repeats for this user id
+    await env.WORDS_DB.prepare(
+      `
+            INSERT OR IGNORE INTO UserProgress (user_id, word_id) VALUES (?, ?)
+        `,
+    )
+      .bind(userId, wordRecord.id)
+      .run();
 
-    // Initialize our imported client module using the environment variables bound to Pages
-    const perplexity = new PerplexityAIClient(env.PERPLEXITY_API_KEY);
-
-    // Execute processing pipeline
-    const aiResponse = await perplexity.generateResponse(prompt, options);
-
-    return new Response(JSON.stringify(aiResponse), {
-      status: aiResponse.success ? 200 : 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-  } catch (error) {
+    // 4. Serve the ready database record
     return new Response(
       JSON.stringify({
-        success: false,
-        error: `System Error: ${error.message}`,
+        success: true,
+        source: "cache_pool",
+        data: {
+          word: wordRecord.word,
+          part_of_speech: wordRecord.part_of_speech,
+          definition: wordRecord.definition,
+          example_sentence: wordRecord.example_sentence,
+        },
       }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      },
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
